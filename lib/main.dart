@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 void main() {
   runApp(const StreamifyApp());
@@ -66,8 +68,41 @@ class _MainDashboardState extends State<MainDashboard> {
   }
 }
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  static const String apiKey = '6648327a11d56b365137fcb154100589';
+  List<dynamic> trendingMovies = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchTrendingMovies();
+  }
+
+  Future<void> fetchTrendingMovies() async {
+    final url = Uri.parse('https://api.themoviedb.org/3/trending/movie/day?api_key=$apiKey');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          trendingMovies = data['results'];
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -86,57 +121,58 @@ class HomeScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Featured Banner
-            Container(
-              height: 220,
-              width: double.infinity,
-              margin: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                gradient: const LinearGradient(
-                  colors: [Colors.redAccent, Colors.black87],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-              ),
-              child: const Stack(
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator(color: Colors.redAccent))
+          : SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Positioned(
-                    bottom: 16,
-                    left: 16,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Featured Blockbuster',
-                          style: TextStyle(color: Colors.amber, fontSize: 14, fontWeight: FontWeight.bold),
+                  // Featured Banner
+                  Container(
+                    height: 220,
+                    width: double.infinity,
+                    margin: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      image: trendingMovies.isNotEmpty && trendingMovies[0]['backdrop_path'] != null
+                          ? DecorationImage(
+                              image: NetworkImage(
+                                  'https://image.tmdb.org/t/p/w500${trendingMovies[0]['backdrop_path']}'),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
+                      gradient: const LinearGradient(
+                        colors: [Colors.redAccent, Colors.black87],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      ),
+                    ),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        gradient: LinearGradient(
+                          colors: [Colors.transparent, Colors.black.withOpacity(0.8)],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
                         ),
-                        SizedBox(height: 4),
-                        Text(
-                          'Watch in HD / 4K with Sub',
-                          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                      ],
+                      ),
+                      padding: const EdgeInsets.all(16),
+                      alignment: Alignment.bottomLeft,
+                      child: Text(
+                        trendingMovies.isNotEmpty ? trendingMovies[0]['title'] ?? 'Blockbuster' : 'Featured Movie',
+                        style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
                     ),
                   ),
+                  _buildSectionRow(context, 'Hollywood Dual Audio (Hindi)', trendingMovies),
+                  _buildSectionRow(context, 'Bollywood & South Movies', trendingMovies.reversed.toList()),
                 ],
               ),
             ),
-            _buildSectionRow(context, 'Hollywood Dual Audio (Hindi)'),
-            _buildSectionRow(context, 'Bollywood Movies'),
-            _buildSectionRow(context, 'South Indian Hindi Dubbed'),
-            _buildSectionRow(context, 'Anime & Cartoons'),
-          ],
-        ),
-      ),
     );
   }
 
-  Widget _buildSectionRow(BuildContext context, String title) {
+  Widget _buildSectionRow(BuildContext context, String title, List movies) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10.0),
       child: Column(
@@ -151,29 +187,44 @@ class HomeScreen extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           SizedBox(
-            height: 170,
+            height: 200,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
-              itemCount: 5,
+              itemCount: movies.length,
               itemBuilder: (context, index) {
+                final movie = movies[index];
+                final posterPath = movie['poster_path'];
+                final imageUrl = posterPath != null
+                    ? 'https://image.tmdb.org/t/p/w500$posterPath'
+                    : '';
+
                 return Container(
-                  width: 115,
+                  width: 120,
                   margin: const EdgeInsets.only(left: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[900],
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.white10),
-                  ),
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.movie_creation, size: 35, color: Colors.redAccent),
-                      const SizedBox(height: 8),
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: imageUrl.isNotEmpty
+                              ? Image.network(
+                                  imageUrl,
+                                  fit: BoxFit.cover,
+                                  width: 120,
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      Container(color: Colors.grey[900], child: const Icon(Icons.broken_image)),
+                                )
+                              : Container(color: Colors.grey[900], child: const Icon(Icons.movie)),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
                       Text(
-                        'Movie ${index + 1}',
+                        movie['title'] ?? 'Unknown',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(color: Colors.white70, fontSize: 13),
                       ),
-                      const SizedBox(height: 4),
                       const Text(
                         'Dual Audio',
                         style: TextStyle(color: Colors.amber, fontSize: 10),
@@ -190,7 +241,6 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-// Categories Screen jahan aapki batayi hui saari sub-categories hongi
 class CategoriesScreen extends StatelessWidget {
   const CategoriesScreen({super.key});
 
@@ -214,7 +264,6 @@ class CategoriesScreen extends StatelessWidget {
         ),
         body: const TabBarView(
           children: [
-            // Movies Sub-categories
             Padding(
               padding: EdgeInsets.all(16.0),
               child: Column(
@@ -228,7 +277,6 @@ class CategoriesScreen extends StatelessWidget {
                 ],
               ),
             ),
-            // TV Shows Sub-categories
             Padding(
               padding: EdgeInsets.all(16.0),
               child: Column(
@@ -242,7 +290,6 @@ class CategoriesScreen extends StatelessWidget {
                 ],
               ),
             ),
-            // Anime Sub-categories
             Padding(
               padding: EdgeInsets.all(16.0),
               child: Column(
@@ -263,7 +310,6 @@ class CategoriesScreen extends StatelessWidget {
   }
 }
 
-// Subscription Screen (Freemium model info)
 class SubscriptionScreen extends StatelessWidget {
   const SubscriptionScreen({super.key});
 
