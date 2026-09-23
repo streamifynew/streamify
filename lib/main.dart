@@ -119,7 +119,12 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.search, color: Colors.white),
-            onPressed: () {},
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SearchScreen()),
+              );
+            },
           ),
         ],
       ),
@@ -220,10 +225,145 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
+// Search Screen for finding movies and shows
+class SearchScreen extends StatefulWidget {
+  const SearchScreen({super.key});
+
+  @override
+  State<SearchScreen> createState() => _SearchScreenState();
+}
+
+class _SearchScreenState extends State<SearchScreen> {
+  static const String apiKey = '6648327a11d56b365137fcb154100589';
+  List<dynamic> searchResults = [];
+  bool isSearching = false;
+  final TextEditingController _searchController = TextEditingController();
+
+  Future<void> performSearch(String query) async {
+    if (query.isEmpty) {
+      setState(() {
+        searchResults = [];
+        isSearching = false;
+      });
+      return;
+    }
+
+    setState(() {
+      isSearching = true;
+    });
+
+    final url = Uri.parse('https://api.themoviedb.org/3/search/multi?api_key=$apiKey&query=$query');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          searchResults = data['results'].where((item) => item['media_type'] != 'person').toList();
+          isSearching = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        isSearching = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: TextField(
+          controller: _searchController,
+          autofocus: true,
+          style: const TextStyle(color: Colors.white),
+          decoration: const InputDecoration(
+            hintText: 'Search movies, shows, anime...',
+            hintStyle: TextStyle(color: Colors.white54),
+            border: InputBorder.none,
+          ),
+          onChanged: performSearch,
+        ),
+        backgroundColor: Colors.black,
+        actions: [
+          if (_searchController.text.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.clear, color: Colors.white),
+              onPressed: () {
+                _searchController.clear();
+                performSearch('');
+              },
+            ),
+        ],
+      ),
+      body: isSearching
+          ? const Center(child: CircularProgressIndicator(color: Colors.redAccent))
+          : searchResults.isEmpty
+              ? const Center(
+                  child: Text(
+                    'Search for your favorite movies & series',
+                    style: TextStyle(color: Colors.white54),
+                  ),
+                )
+              : GridView.builder(
+                  padding: const EdgeInsets.all(12),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    childAspectRatio: 0.65,
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
+                  ),
+                  itemCount: searchResults.length,
+                  itemBuilder: (context, index) {
+                    final item = searchResults[index];
+                    final posterPath = item['poster_path'];
+                    final imageUrl = posterPath != null ? 'https://image.tmdb.org/t/p/w500$posterPath' : '';
+                    final mediaType = item['media_type'] ?? 'movie';
+
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => DetailScreen(
+                              itemData: item,
+                              contentType: mediaType,
+                              suggestionsList: searchResults,
+                            ),
+                          ),
+                        );
+                      },
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: imageUrl.isNotEmpty
+                                  ? Image.network(imageUrl, fit: BoxFit.cover, width: double.infinity)
+                                  : Container(color: Colors.grey[900], child: const Icon(Icons.movie)),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            item['title'] ?? item['name'] ?? 'Unknown',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(color: Colors.white70, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+    );
+  }
+}
+
 // Detail Screen with Player and Specific Suggestions
 class DetailScreen extends StatefulWidget {
   final Map<String, dynamic> itemData;
-  final String contentType; // 'movie', 'tv', or 'anime'
+  final String contentType;
   final List<dynamic> suggestionsList;
 
   const DetailScreen({
@@ -244,7 +384,6 @@ class _DetailScreenState extends State<DetailScreen> {
   @override
   void initState() {
     super.initState();
-    // Test sample video stream link
     _videoController = VideoPlayerController.networkUrl(
       Uri.parse('https://flutter.github.io/assets-for-video-assets/bees.mp4'),
     )..initialize().then((_) {
@@ -271,13 +410,10 @@ class _DetailScreenState extends State<DetailScreen> {
   Widget build(BuildContext context) {
     final title = widget.itemData['title'] ?? widget.itemData['name'] ?? 'Title';
     final backdropPath = widget.itemData['backdrop_path'];
-    final posterPath = widget.itemData['poster_path'];
     final overview = widget.itemData['overview'] ?? 'No description available.';
     final releaseDate = widget.itemData['release_date'] ?? widget.itemData['first_air_date'] ?? 'N/A';
     final rating = widget.itemData['vote_average']?.toString() ?? 'N/A';
-
     final backdropUrl = backdropPath != null ? 'https://image.tmdb.org/t/p/w500$backdropPath' : '';
-    final posterUrl = posterPath != null ? 'https://image.tmdb.org/t/p/w500$posterPath' : '';
 
     return Scaffold(
       appBar: AppBar(
@@ -288,7 +424,6 @@ class _DetailScreenState extends State<DetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Video Player or Backdrop Banner section
             isPlayingVideo
                 ? Container(
                     height: MediaQuery.of(context).orientation == Orientation.landscape ? MediaQuery.of(context).size.height : 230,
@@ -336,8 +471,6 @@ class _DetailScreenState extends State<DetailScreen> {
                       ),
                     ),
                   ),
-
-            // Movie/Show Details Info
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
@@ -378,8 +511,6 @@ class _DetailScreenState extends State<DetailScreen> {
                     style: const TextStyle(color: Colors.white60, fontSize: 14, height: 1.4),
                   ),
                   const SizedBox(height: 20),
-
-                  // Watch Now / Download Action Buttons
                   Row(
                     children: [
                       Expanded(
@@ -398,22 +529,14 @@ class _DetailScreenState extends State<DetailScreen> {
                     ],
                   ),
                   const SizedBox(height: 24),
-
-                  // Dynamic Suggestions Section based on category type
-                  Text(
-                    widget.contentType == 'anime'
-                        ? 'Recommended Anime & Cartoons'
-                        : widget.contentType == 'tv'
-                            ? 'Recommended TV Shows & Series'
-                            : 'Recommended Movies',
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                  const Text(
+                    'Recommended Suggestions',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
                   ),
                   const SizedBox(height: 12),
                 ],
               ),
             ),
-
-            // Suggestions Horizontal List
             SizedBox(
               height: 180,
               child: ListView.builder(
