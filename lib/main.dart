@@ -38,15 +38,11 @@ class HomeScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.search, color: Colors.white),
-            onPressed: () {
-              // Search screen open karne ka logic
-            },
+            onPressed: () {},
           ),
           IconButton(
             icon: const Icon(Icons.person, color: Colors.white),
-            onPressed: () {
-              // Profile settings
-            },
+            onPressed: () {},
           ),
         ],
       ),
@@ -84,8 +80,6 @@ class HomeScreen extends StatelessWidget {
                 ],
               ),
             ),
-
-            // Movie Rows
             _buildMovieRow(context, 'Trending Movies'),
             _buildMovieRow(context, 'Latest Web Series'),
             _buildMovieRow(context, 'Action & Thriller'),
@@ -105,11 +99,7 @@ class HomeScreen extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Text(
               categoryTitle,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
             ),
           ),
           const SizedBox(height: 10),
@@ -121,9 +111,12 @@ class HomeScreen extends StatelessWidget {
               itemBuilder: (context, index) {
                 return GestureDetector(
                   onTap: () {
-                    // Movie detail page par jane ke liye
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('$categoryTitle - Item ${index + 1} clicked')),
+                    // Movie click hone par Detail Screen par jayenge
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => DetailScreen(movieTitle: '$categoryTitle - Movie ${index + 1}'),
+                      ),
                     );
                   },
                   child: Container(
@@ -151,6 +144,78 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// Detail Screen jahan movie ki info aur Play button hoga
+class DetailScreen extends StatelessWidget {
+  final String movieTitle;
+  const DetailScreen({super.key, required this.movieTitle});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(movieTitle),
+        backgroundColor: Colors.black,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              height: 220,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.grey[900],
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Center(
+                child: Icon(Icons.play_circle_filled, size: 80, color: Colors.redAccent),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              movieTitle,
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'Description: Yeh ek shandar movie hai jo Streamify par available hai. High quality streaming ka maza lijiye.',
+              style: TextStyle(color: Colors.white60, fontSize: 14),
+            ),
+            const Spacer(),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ).wrap(
+                ElevatedButton(
+                  onPressed: () {
+                    // Yahan video player open hoga
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Playing video...')),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.play_arrow, color: Colors.white),
+                      SizedBox(width: 8),
+                      Text('Play Movie', style: TextStyle(fontSize: 16, color: Colors.white)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
