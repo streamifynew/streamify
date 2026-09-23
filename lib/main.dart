@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
 
 void main() {
   runApp(const StreamifyApp());
@@ -17,8 +16,52 @@ class StreamifyApp extends StatelessWidget {
         brightness: Brightness.dark,
         scaffoldBackgroundColor: const Color(0xFF0F0F0F),
         primaryColor: Colors.redAccent,
+        colorScheme: const ColorScheme.dark(
+          primary: Colors.redAccent,
+          secondary: Colors.amber,
+        ),
       ),
-      home: const HomeScreen(),
+      home: const MainDashboard(),
+    );
+  }
+}
+
+class MainDashboard extends StatefulWidget {
+  const MainDashboard({super.key});
+
+  @override
+  State<MainDashboard> createState() => _MainDashboardState();
+}
+
+class _MainDashboardState extends State<MainDashboard> {
+  int _currentIndex = 0;
+
+  final List<Widget> _screens = [
+    const HomeScreen(),
+    const CategoriesScreen(),
+    const SubscriptionScreen(),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: _screens[_currentIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        backgroundColor: const Color(0xFF161616),
+        selectedItemColor: Colors.redAccent,
+        unselectedItemColor: Colors.white60,
+        onTap: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.category), label: 'Categories'),
+          BottomNavigationBarItem(icon: Icon(Icons.workspace_premium), label: 'Go Premium'),
+        ],
+      ),
     );
   }
 }
@@ -41,18 +84,15 @@ class HomeScreen extends StatelessWidget {
             icon: const Icon(Icons.search, color: Colors.white),
             onPressed: () {},
           ),
-          IconButton(
-            icon: const Icon(Icons.person, color: Colors.white),
-            onPressed: () {},
-          ),
         ],
       ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Featured Banner
             Container(
-              height: 250,
+              height: 220,
               width: double.infinity,
               margin: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -68,24 +108,35 @@ class HomeScreen extends StatelessWidget {
                   Positioned(
                     bottom: 16,
                     left: 16,
-                    child: Text(
-                      'Trending Now: Blockbuster Movie',
-                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Featured Blockbuster',
+                          style: TextStyle(color: Colors.amber, fontSize: 14, fontWeight: FontWeight.bold),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'Watch in HD / 4K with Sub',
+                          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-            _buildMovieRow(context, 'Trending Movies'),
-            _buildMovieRow(context, 'Latest Web Series'),
-            _buildMovieRow(context, 'Action & Thriller'),
+            _buildSectionRow(context, 'Hollywood Dual Audio (Hindi)'),
+            _buildSectionRow(context, 'Bollywood Movies'),
+            _buildSectionRow(context, 'South Indian Hindi Dubbed'),
+            _buildSectionRow(context, 'Anime & Cartoons'),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildMovieRow(BuildContext context, String categoryTitle) {
+  Widget _buildSectionRow(BuildContext context, String title) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10.0),
       child: Column(
@@ -94,45 +145,40 @@ class HomeScreen extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Text(
-              categoryTitle,
+              title,
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
             ),
           ),
           const SizedBox(height: 10),
           SizedBox(
-            height: 180,
+            height: 170,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
-              itemCount: 6,
+              itemCount: 5,
               itemBuilder: (context, index) {
-                return GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => DetailScreen(movieTitle: '$categoryTitle - Movie ${index + 1}'),
+                return Container(
+                  width: 115,
+                  margin: const EdgeInsets.only(left: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[900],
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.white10),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.movie_creation, size: 35, color: Colors.redAccent),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Movie ${index + 1}',
+                        style: const TextStyle(color: Colors.white70, fontSize: 13),
                       ),
-                    );
-                  },
-                  child: Container(
-                    width: 120,
-                    margin: const EdgeInsets.only(left: 16),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[900],
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white12),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.movie, size: 40, color: Colors.redAccent),
-                        const SizedBox(height: 10),
-                        Text(
-                          'Movie ${index + 1}',
-                          style: const TextStyle(color: Colors.white70, fontSize: 14),
-                        ),
-                      ],
-                    ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Dual Audio',
+                        style: TextStyle(color: Colors.amber, fontSize: 10),
+                      ),
+                    ],
                   ),
                 );
               },
@@ -144,69 +190,70 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-class DetailScreen extends StatelessWidget {
-  final String movieTitle;
-  const DetailScreen({super.key, required this.movieTitle});
+// Categories Screen jahan aapki batayi hui saari sub-categories hongi
+class CategoriesScreen extends StatelessWidget {
+  const CategoriesScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(movieTitle),
-        backgroundColor: Colors.black,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Explore Categories'),
+          bottom: const TabBar(
+            indicatorColor: Colors.redAccent,
+            labelColor: Colors.redAccent,
+            unselectedLabelColor: Colors.white60,
+            tabs: [
+              Tab(text: 'Movies'),
+              Tab(text: 'TV Shows'),
+              Tab(text: 'Anime'),
+            ],
+          ),
+        ),
+        body: const TabBarView(
           children: [
-            Container(
-              height: 220,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.grey[900],
-                borderRadius: BorderRadius.circular(12),
+            // Movies Sub-categories
+            Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('• Hollywood Dual Audio (Hindi)', style: TextStyle(fontSize: 16, color: Colors.white)),
+                  SizedBox(height: 12),
+                  Text('• Bollywood Movies (Hindi)', style: TextStyle(fontSize: 16, color: Colors.white)),
+                  SizedBox(height: 12),
+                  Text('• South Indian Movies (Hindi Dubbed)', style: TextStyle(fontSize: 16, color: Colors.white)),
+                ],
               ),
-              child: const Center(
-                child: Icon(Icons.play_circle_filled, size: 80, color: Colors.redAccent),
+            ),
+            // TV Shows Sub-categories
+            Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('• Web Series Dual Audio (Hindi)', style: TextStyle(fontSize: 16, color: Colors.white)),
+                  SizedBox(height: 12),
+                  Text('• TV Shows Dual Audio (Hindi)', style: TextStyle(fontSize: 16, color: Colors.white)),
+                  SizedBox(height: 12),
+                  Text('• Bollywood Series', style: TextStyle(fontSize: 16, color: Colors.white)),
+                ],
               ),
             ),
-            const SizedBox(height: 20),
-            Text(
-              movieTitle,
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
-            ),
-            const SizedBox(height: 10),
-            const Text(
-              'Description: Yeh ek shandar movie hai jo Streamify par available hai. High quality streaming ka maza lijiye.',
-              style: TextStyle(color: Colors.white60, fontSize: 14),
-            ),
-            const Spacer(),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: () {
-                  // Video Player screen par jayenge
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const VideoPlayerScreen(),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.redAccent,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.play_arrow, color: Colors.white),
-                    SizedBox(width: 8),
-                    Text('Play Movie', style: TextStyle(fontSize: 16, color: Colors.white)),
-                  ],
-                ),
+            // Anime Sub-categories
+            Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('• Animated Movies (Multi-Audio/Hindi)', style: TextStyle(fontSize: 16, color: Colors.white)),
+                  SizedBox(height: 12),
+                  Text('• Anime Series (Multi-Audio/Hindi)', style: TextStyle(fontSize: 16, color: Colors.white)),
+                  SizedBox(height: 12),
+                  Text('• Cartoons (Hindi)', style: TextStyle(fontSize: 16, color: Colors.white)),
+                ],
               ),
             ),
           ],
@@ -216,49 +263,66 @@ class DetailScreen extends StatelessWidget {
   }
 }
 
-// Asli Video Player Screen
-class VideoPlayerScreen extends StatefulWidget {
-  const VideoPlayerScreen({super.key});
-
-  @override
-  State<VideoPlayerScreen> createState() => _VideoPlayerScreenState();
-}
-
-class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
-  late VideoPlayerController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    // Yahan hum ek sample video link use kar rahe hain test karne ke liye
-    _controller = VideoPlayerController.networkUrl(
-      Uri.parse('https://flutter.github.io/assets-for-video-assets/bees.mp4'),
-    )..initialize().then((_) {
-        setState(() {});
-        _controller.play();
-      });
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+// Subscription Screen (Freemium model info)
+class SubscriptionScreen extends StatelessWidget {
+  const SubscriptionScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Streamify Player'),
-        backgroundColor: Colors.black,
-      ),
-      body: Center(
-        child: _controller.value.isInitialized
-            ? AspectRatio(
-                aspectRatio: _controller.value.aspectRatio,
-                child: VideoPlayer(_controller),
-              )
-            : const CircularProgressIndicator(color: Colors.redAccent),
+      appBar: AppBar(title: const Text('Streamify Premium')),
+      body: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const Icon(Icons.workspace_premium, size: 80, color: Colors.amber),
+            const SizedBox(height: 16),
+            const Text(
+              'Unlock 1080p, Downloads & Ad-Free Experience',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey[900],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.amber.withOpacity(0.5)),
+              ),
+              child: const Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Free Plan', style: TextStyle(color: Colors.white70)),
+                      Text('480p + Ads', style: TextStyle(color: Colors.redAccent)),
+                    ],
+                  ),
+                  Divider(height: 24, color: Colors.white24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('VIP Premium', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)),
+                      Text('1080p + No Ads + Downloads', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const Spacer(),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.amber),
+                onPressed: () {},
+                child: const Text('Upgrade Now', style: TextStyle(fontSize: 16, color: Colors.black, fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
