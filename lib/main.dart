@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:video_player/video_player.dart';
 
 void main() {
   runApp(const StreamifyApp());
@@ -127,52 +129,15 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Featured Banner
-                  Container(
-                    height: 220,
-                    width: double.infinity,
-                    margin: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      image: trendingMovies.isNotEmpty && trendingMovies[0]['backdrop_path'] != null
-                          ? DecorationImage(
-                              image: NetworkImage(
-                                  'https://image.tmdb.org/t/p/w500${trendingMovies[0]['backdrop_path']}'),
-                              fit: BoxFit.cover,
-                            )
-                          : null,
-                      gradient: const LinearGradient(
-                        colors: [Colors.redAccent, Colors.black87],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                      ),
-                    ),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        gradient: LinearGradient(
-                          colors: [Colors.transparent, Colors.black.withOpacity(0.8)],
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                        ),
-                      ),
-                      padding: const EdgeInsets.all(16),
-                      alignment: Alignment.bottomLeft,
-                      child: Text(
-                        trendingMovies.isNotEmpty ? trendingMovies[0]['title'] ?? 'Blockbuster' : 'Featured Movie',
-                        style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                  _buildSectionRow(context, 'Hollywood Dual Audio (Hindi)', trendingMovies),
-                  _buildSectionRow(context, 'Bollywood & South Movies', trendingMovies.reversed.toList()),
+                  _buildSectionRow(context, 'Hollywood Dual Audio (Hindi)', trendingMovies, 'movie'),
+                  _buildSectionRow(context, 'Bollywood & South Movies', trendingMovies.reversed.toList(), 'movie'),
                 ],
               ),
             ),
     );
   }
 
-  Widget _buildSectionRow(BuildContext context, String title, List movies) {
+  Widget _buildSectionRow(BuildContext context, String title, List movies, String contentType) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10.0),
       child: Column(
@@ -198,44 +163,311 @@ class _HomeScreenState extends State<HomeScreen> {
                     ? 'https://image.tmdb.org/t/p/w500$posterPath'
                     : '';
 
-                return Container(
-                  width: 120,
-                  margin: const EdgeInsets.only(left: 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: imageUrl.isNotEmpty
-                              ? Image.network(
-                                  imageUrl,
-                                  fit: BoxFit.cover,
-                                  width: 120,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      Container(color: Colors.grey[900], child: const Icon(Icons.broken_image)),
-                                )
-                              : Container(color: Colors.grey[900], child: const Icon(Icons.movie)),
+                return GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => DetailScreen(
+                          itemData: movie,
+                          contentType: contentType,
+                          suggestionsList: movies,
                         ),
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        movie['title'] ?? 'Unknown',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Colors.white70, fontSize: 13),
-                      ),
-                      const Text(
-                        'Dual Audio',
-                        style: TextStyle(color: Colors.amber, fontSize: 10),
-                      ),
-                    ],
+                    );
+                  },
+                  child: Container(
+                    width: 120,
+                    margin: const EdgeInsets.only(left: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: imageUrl.isNotEmpty
+                                ? Image.network(
+                                    imageUrl,
+                                    fit: BoxFit.cover,
+                                    width: 120,
+                                    errorBuilder: (context, error, stackTrace) =>
+                                        Container(color: Colors.grey[900], child: const Icon(Icons.broken_image)),
+                                  )
+                                : Container(color: Colors.grey[900], child: const Icon(Icons.movie)),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          movie['title'] ?? movie['name'] ?? 'Unknown',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: Colors.white70, fontSize: 13),
+                        ),
+                        const Text(
+                          'Dual Audio',
+                          style: TextStyle(color: Colors.amber, fontSize: 10),
+                        ),
+                      ],
+                    ),
                   ),
                 );
               },
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// Detail Screen with Player and Specific Suggestions
+class DetailScreen extends StatefulWidget {
+  final Map<String, dynamic> itemData;
+  final String contentType; // 'movie', 'tv', or 'anime'
+  final List<dynamic> suggestionsList;
+
+  const DetailScreen({
+    super.key,
+    required this.itemData,
+    required this.contentType,
+    required this.suggestionsList,
+  });
+
+  @override
+  State<DetailScreen> createState() => _DetailScreenState();
+}
+
+class _DetailScreenState extends State<DetailScreen> {
+  late VideoPlayerController _videoController;
+  bool isPlayingVideo = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Test sample video stream link
+    _videoController = VideoPlayerController.networkUrl(
+      Uri.parse('https://flutter.github.io/assets-for-video-assets/bees.mp4'),
+    )..initialize().then((_) {
+        setState(() {});
+      });
+  }
+
+  @override
+  void dispose() {
+    _videoController.dispose();
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+    super.dispose();
+  }
+
+  void toggleFullScreen() {
+    if (MediaQuery.of(context).orientation == Orientation.portrait) {
+      SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]);
+    } else {
+      SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final title = widget.itemData['title'] ?? widget.itemData['name'] ?? 'Title';
+    final backdropPath = widget.itemData['backdrop_path'];
+    final posterPath = widget.itemData['poster_path'];
+    final overview = widget.itemData['overview'] ?? 'No description available.';
+    final releaseDate = widget.itemData['release_date'] ?? widget.itemData['first_air_date'] ?? 'N/A';
+    final rating = widget.itemData['vote_average']?.toString() ?? 'N/A';
+
+    final backdropUrl = backdropPath != null ? 'https://image.tmdb.org/t/p/w500$backdropPath' : '';
+    final posterUrl = posterPath != null ? 'https://image.tmdb.org/t/p/w500$posterPath' : '';
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
+        backgroundColor: Colors.black,
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Video Player or Backdrop Banner section
+            isPlayingVideo
+                ? Container(
+                    height: MediaQuery.of(context).orientation == Orientation.landscape ? MediaQuery.of(context).size.height : 230,
+                    width: double.infinity,
+                    color: Colors.black,
+                    child: Stack(
+                      alignment: Alignment.bottomRight,
+                      children: [
+                        Center(
+                          child: _videoController.value.isInitialized
+                              ? AspectRatio(
+                                  aspectRatio: _videoController.value.aspectRatio,
+                                  child: VideoPlayer(_videoController),
+                                )
+                              : const CircularProgressIndicator(color: Colors.redAccent),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: IconButton(
+                            icon: const Icon(Icons.fullscreen, color: Colors.white, size: 30),
+                            onPressed: toggleFullScreen,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : Container(
+                    height: 230,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      image: backdropUrl.isNotEmpty
+                          ? DecorationImage(image: NetworkImage(backdropUrl), fit: BoxFit.cover)
+                          : null,
+                      color: Colors.grey[900],
+                    ),
+                    child: Center(
+                      child: IconButton(
+                        icon: const Icon(Icons.play_circle_filled, size: 70, color: Colors.redAccent),
+                        onPressed: () {
+                          setState(() {
+                            isPlayingVideo = true;
+                            _videoController.play();
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+
+            // Movie/Show Details Info
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(Icons.star, color: Colors.amber, size: 18),
+                      const SizedBox(width: 4),
+                      Text(rating, style: const TextStyle(color: Colors.white70)),
+                      const SizedBox(width: 16),
+                      const Icon(Icons.calendar_today, color: Colors.white54, size: 16),
+                      const SizedBox(width: 4),
+                      Text(releaseDate, style: const TextStyle(color: Colors.white70)),
+                      const SizedBox(width: 16),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.redAccent.withOpacity(0.2),
+                          border: Border.all(color: Colors.redAccent),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          widget.contentType.toUpperCase(),
+                          style: const TextStyle(color: Colors.redAccent, fontSize: 10, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    overview,
+                    style: const TextStyle(color: Colors.white60, fontSize: 14, height: 1.4),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Watch Now / Download Action Buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, padding: const EdgeInsets.symmetric(vertical: 12)),
+                          onPressed: () {
+                            setState(() {
+                              isPlayingVideo = true;
+                              _videoController.play();
+                            });
+                          },
+                          icon: const Icon(Icons.play_arrow, color: Colors.white),
+                          label: const Text('Watch Now (Free 480p)', style: TextStyle(color: Colors.white)),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Dynamic Suggestions Section based on category type
+                  Text(
+                    widget.contentType == 'anime'
+                        ? 'Recommended Anime & Cartoons'
+                        : widget.contentType == 'tv'
+                            ? 'Recommended TV Shows & Series'
+                            : 'Recommended Movies',
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+              ),
+            ),
+
+            // Suggestions Horizontal List
+            SizedBox(
+              height: 180,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: widget.suggestionsList.length,
+                itemBuilder: (context, index) {
+                  final suggestion = widget.suggestionsList[index];
+                  final sPoster = suggestion['poster_path'];
+                  final sImageUrl = sPoster != null ? 'https://image.tmdb.org/t/p/w500$sPoster' : '';
+
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => DetailScreen(
+                            itemData: suggestion,
+                            contentType: widget.contentType,
+                            suggestionsList: widget.suggestionsList,
+                          ),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      width: 110,
+                      margin: const EdgeInsets.only(left: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: sImageUrl.isNotEmpty
+                                  ? Image.network(sImageUrl, fit: BoxFit.cover, width: 110)
+                                  : Container(color: Colors.grey[900], child: const Icon(Icons.movie)),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            suggestion['title'] ?? suggestion['name'] ?? 'Suggestion',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(color: Colors.white70, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 30),
+          ],
+        ),
       ),
     );
   }
