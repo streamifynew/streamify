@@ -8,6 +8,9 @@ void main() {
   runApp(const StreamifyApp());
 }
 
+// Global Watchlist List to store saved movies/shows
+List<Map<String, dynamic>> globalWatchlist = [];
+
 class StreamifyApp extends StatelessWidget {
   const StreamifyApp({super.key});
 
@@ -43,6 +46,7 @@ class _MainDashboardState extends State<MainDashboard> {
   final List<Widget> _screens = [
     const HomeScreen(),
     const CategoriesScreen(),
+    const WatchlistScreen(),
     const SubscriptionScreen(),
   ];
 
@@ -55,6 +59,7 @@ class _MainDashboardState extends State<MainDashboard> {
         backgroundColor: const Color(0xFF161616),
         selectedItemColor: Colors.redAccent,
         unselectedItemColor: Colors.white60,
+        type: BottomNavigationBarType.fixed,
         onTap: (index) {
           setState(() {
             _currentIndex = index;
@@ -63,6 +68,7 @@ class _MainDashboardState extends State<MainDashboard> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.category), label: 'Categories'),
+          BottomNavigationBarItem(icon: Icon(Icons.bookmark), label: 'Watchlist'),
           BottomNavigationBarItem(icon: Icon(Icons.workspace_premium), label: 'Go Premium'),
         ],
       ),
@@ -225,7 +231,98 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// Search Screen for finding movies and shows
+// Watchlist Screen to show saved movies
+class WatchlistScreen extends StatefulWidget {
+  const WatchlistScreen({super.key});
+
+  @override
+  State<WatchlistScreen> createState() => _WatchlistScreenState();
+}
+
+class _WatchlistScreenState extends State<WatchlistScreen> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('My Watchlist'),
+        backgroundColor: Colors.black,
+      ),
+      body: globalWatchlist.isEmpty
+          ? const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.bookmark_border, size: 70, color: Colors.white54),
+                  SizedBox(height: 12),
+                  Text(
+                    'Your watchlist is empty!',
+                    style: TextStyle(color: Colors.white54, fontSize: 16),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Save your favorite movies & shows to watch later.',
+                    style: TextStyle(color: Colors.white38, fontSize: 12),
+                  ),
+                ],
+              ),
+            )
+          : GridView.builder(
+              padding: const EdgeInsets.all(12),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                childAspectRatio: 0.65,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+              ),
+              itemCount: globalWatchlist.length,
+              itemBuilder: (context, index) {
+                final item = globalWatchlist[index];
+                final posterPath = item['poster_path'];
+                final imageUrl = posterPath != null ? 'https://image.tmdb.org/t/p/w500$posterPath' : '';
+
+                return GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => DetailScreen(
+                          itemData: item,
+                          contentType: 'movie',
+                          suggestionsList: globalWatchlist,
+                        ),
+                      ),
+                    ).then((_) {
+                      setState(() {});
+                    });
+                  },
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: imageUrl.isNotEmpty
+                              ? Image.network(imageUrl, fit: BoxFit.cover, width: double.infinity)
+                              : Container(color: Colors.grey[900], child: const Icon(Icons.movie)),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        item['title'] ?? item['name'] ?? 'Unknown',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Colors.white70, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+    );
+  }
+}
+
+// Search Screen
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
 
@@ -360,7 +457,7 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 }
 
-// Detail Screen with Player and Specific Suggestions
+// Detail Screen with Watchlist Toggle Button and Video Player
 class DetailScreen extends StatefulWidget {
   final Map<String, dynamic> itemData;
   final String contentType;
@@ -380,10 +477,14 @@ class DetailScreen extends StatefulWidget {
 class _DetailScreenState extends State<DetailScreen> {
   late VideoPlayerController _videoController;
   bool isPlayingVideo = false;
+  bool isInWatchlist = false;
 
   @override
   void initState() {
     super.initState();
+    // Check if item is already in watchlist
+    isInWatchlist = globalWatchlist.any((element) => element['id'] == widget.itemData['id']);
+
     _videoController = VideoPlayerController.networkUrl(
       Uri.parse('https://flutter.github.io/assets-for-video-assets/bees.mp4'),
     )..initialize().then((_) {
@@ -406,6 +507,24 @@ class _DetailScreenState extends State<DetailScreen> {
     }
   }
 
+  void toggleWatchlist() {
+    setState(() {
+      if (isInWatchlist) {
+        globalWatchlist.removeWhere((element) => element['id'] == widget.itemData['id']);
+        isInWatchlist = false;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Removed from Watchlist'), duration: Duration(seconds: 1)),
+        );
+      } else {
+        globalWatchlist.add(widget.itemData);
+        isInWatchlist = true;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Added to Watchlist'), duration: Duration(seconds: 1)),
+        );
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final title = widget.itemData['title'] ?? widget.itemData['name'] ?? 'Title';
@@ -419,6 +538,15 @@ class _DetailScreenState extends State<DetailScreen> {
       appBar: AppBar(
         title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
         backgroundColor: Colors.black,
+        actions: [
+          IconButton(
+            icon: Icon(
+              isInWatchlist ? Icons.bookmark : Icons.bookmark_border,
+              color: isInWatchlist ? Colors.amber : Colors.white,
+            ),
+            onPressed: toggleWatchlist,
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Column(
