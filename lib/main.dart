@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:video_player/video_player.dart';
 
 void main() {
   runApp(const StreamifyApp());
@@ -50,7 +51,6 @@ class HomeScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Featured Banner
             Container(
               height: 250,
               width: double.infinity,
@@ -70,11 +70,7 @@ class HomeScreen extends StatelessWidget {
                     left: 16,
                     child: Text(
                       'Trending Now: Blockbuster Movie',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ],
@@ -111,7 +107,6 @@ class HomeScreen extends StatelessWidget {
               itemBuilder: (context, index) {
                 return GestureDetector(
                   onTap: () {
-                    // Movie click hone par Detail Screen par jayenge
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -149,7 +144,6 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-// Detail Screen jahan movie ki info aur Play button hoga
 class DetailScreen extends StatelessWidget {
   final String movieTitle;
   const DetailScreen({super.key, required this.movieTitle});
@@ -191,31 +185,80 @@ class DetailScreen extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               height: 50,
-              child: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ).wrap(
-                ElevatedButton(
-                  onPressed: () {
-                    // Yahan video player open hoga
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Playing video...')),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.play_arrow, color: Colors.white),
-                      SizedBox(width: 8),
-                      Text('Play Movie', style: TextStyle(fontSize: 16, color: Colors.white)),
-                    ],
-                  ),
+              child: ElevatedButton(
+                onPressed: () {
+                  // Video Player screen par jayenge
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const VideoPlayerScreen(),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.redAccent,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.play_arrow, color: Colors.white),
+                    SizedBox(width: 8),
+                    Text('Play Movie', style: TextStyle(fontSize: 16, color: Colors.white)),
+                  ],
                 ),
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// Asli Video Player Screen
+class VideoPlayerScreen extends StatefulWidget {
+  const VideoPlayerScreen({super.key});
+
+  @override
+  State<VideoPlayerScreen> createState() => _VideoPlayerScreenState();
+}
+
+class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
+  late VideoPlayerController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    // Yahan hum ek sample video link use kar rahe hain test karne ke liye
+    _controller = VideoPlayerController.networkUrl(
+      Uri.parse('https://flutter.github.io/assets-for-video-assets/bees.mp4'),
+    )..initialize().then((_) {
+        setState(() {});
+        _controller.play();
+      });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Streamify Player'),
+        backgroundColor: Colors.black,
+      ),
+      body: Center(
+        child: _controller.value.isInitialized
+            ? AspectRatio(
+                aspectRatio: _controller.value.aspectRatio,
+                child: VideoPlayer(_controller),
+              )
+            : const CircularProgressIndicator(color: Colors.redAccent),
       ),
     );
   }
