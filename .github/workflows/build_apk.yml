@@ -23,16 +23,17 @@ jobs:
           flutter-version: '3.19.x'
           channel: 'stable'
 
+      - name: Generate Project Structure
+        run: flutter create . --org com.streamify.app
+
       - name: Get Dependencies
         run: flutter pub get
-        working-directory: ./root
 
       - name: Build APK
         run: flutter build apk --release
-        working-directory: ./root
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: app-release
-          path: root/build/app/outputs/flutter-apk/app-release.apk
+          path: build/app/outputs/flutter-apk/app-release.apk
