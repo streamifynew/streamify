@@ -23,11 +23,17 @@ jobs:
           flutter-version: '3.19.x'
           channel: 'stable'
 
-      - name: Auto Fix and Build
+      - name: Fix Gradle and Build
         run: |
           if [ -d "root" ]; then
             cp -r root/* .
           fi
+          
+          # Remove old android folder to prevent version mismatch
+          rm -rf android
+          
+          # Recreate native android wrapper files cleanly
+          flutter create . --platforms=android --org com.streamworld.app
           
           flutter pub add http
           flutter pub add video_player
