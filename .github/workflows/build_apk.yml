@@ -5,7 +5,7 @@ on:
     branches: [ "main" ]
 
 jobs:
-_build:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -25,17 +25,14 @@ _build:
 
       - name: Auto Fix and Build
         run: |
-          # Agar files root folder mein hain toh unhe main directory mein laao ya project fix karo
           if [ -d "root" ]; then
             cp -r root/* .
           fi
           
-          # Ensure essential packages are present
           flutter pub add http
           flutter pub add video_player
           flutter pub get
           
-          # Build Release APK
           flutter build apk --release
 
       - name: Upload APK
