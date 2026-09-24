@@ -5,7 +5,7 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build:
+_build:
     runs-on: ubuntu-latest
 
     steps:
@@ -23,14 +23,23 @@ jobs:
           flutter-version: '3.19.x'
           channel: 'stable'
 
-      - name: Build APK from Root Folder
+      - name: Auto Fix and Build
         run: |
-          cd root
+          # Agar files root folder mein hain toh unhe main directory mein laao ya project fix karo
+          if [ -d "root" ]; then
+            cp -r root/* .
+          fi
+          
+          # Ensure essential packages are present
+          flutter pub add http
+          flutter pub add video_player
           flutter pub get
+          
+          # Build Release APK
           flutter build apk --release
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: app-release
-          path: root/build/app/outputs/flutter-apk/app-release.apk
+          path: build/app/outputs/flutter-apk/app-release.apk
