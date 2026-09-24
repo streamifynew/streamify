@@ -23,6 +23,7 @@ class StreamifyApp extends StatelessWidget {
   }
 }
 
+// 1. HOME SCREEN (index.html equivalent)
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -51,45 +52,25 @@ class _HomeScreenState extends State<HomeScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // 1. Top Bar: App Logo / Icon & Search Bar
-            _buildTopBar(),
+            // Top Bar & Search Bar
+            _buildTopBar(context),
 
-            // 2. Horizontal Navigation Tabs
+            // Horizontal Category Tabs
             _buildTabBar(),
 
-            // 3. Main Scrollable Content Area (Structured & Clean)
+            // Scrollable Content
             Expanded(
               child: SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Featured Banner Carousel Section
-                    _buildFeaturedBanner(),
-
-                    // Sub-Categories Filter Pills
-                    _buildSubCategoryPills(),
+                    _buildFeaturedBanner(context),
+                    _buildSubCategoryPills(context),
                     const SizedBox(height: 15),
-
-                    // Section 1: Trending Movies / One-Person Army Action
-                    _buildSectionHeader('One-Person Army Action 👊'),
-                    _buildHorizontalCardList([
-                      _ContentItem('Irumudi [Hindi]', 'Hindi', 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=300&auto=format&fit=crop&q=60'),
-                      _ContentItem('Kattalan [Hindi]', 'Hindi', 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=300&auto=format&fit=crop&q=60'),
-                      _ContentItem('Mirzapur: The Movie', 'Hindi', 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=300&auto=format&fit=crop&q=60'),
-                    ]),
-
-                    // Section 2: Laugh Out Loud
-                    _buildSectionHeader('Laugh Out Loud 😂'),
-                    _buildHorizontalCardList([
-                      _ContentItem('Vibe [Hindi]', 'Hindi', 'https://images.unsplash.com/photo-1563089145-599997674d42?w=300&auto=format&fit=crop&q=60'),
-                      _ContentItem('Modha Rathiri [Hindi]', 'Hindi', 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=300&auto=format&fit=crop&q=60'),
-                      _ContentItem('Dhamaal 4 [Hindi]', 'Hindi', 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=300&auto=format&fit=crop&q=60'),
-                    ]),
-
-                    // Section 3: Indian Stars Row
-                    _buildSectionHeader('Indian Stars'),
-                    _buildActorList(),
-                    const SizedBox(height: 20),
+                    _buildSectionHeader('Trending Movies', context),
+                    _buildHorizontalCardList(context),
+                    _buildSectionHeader('Laugh Out Loud', context),
+                    _buildHorizontalCardList(context),
                   ],
                 ),
               ),
@@ -99,7 +80,12 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
+        onTap: (index) {
+          setState(() => _currentIndex = index);
+          if (index == 1) {
+            // Example navigation or handling
+          }
+        },
         backgroundColor: const Color(0xFF1A1A1A),
         selectedItemColor: Colors.greenAccent,
         unselectedItemColor: Colors.grey,
@@ -113,7 +99,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildTopBar() {
+  Widget _buildTopBar(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
       child: Row(
@@ -173,7 +159,14 @@ class _HomeScreenState extends State<HomeScreen> {
           final tab = _tabs[index];
           final isSelected = _selectedTab == tab;
           return GestureDetector(
-            onTap: () => setState(() => _selectedTab = tab),
+            onTap: () {
+              setState(() => _selectedTab = tab);
+              // Navigate to Category Screen if clicked
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => CategoryScreen(categoryName: tab)),
+              );
+            },
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12.0),
               child: Center(
@@ -193,57 +186,64 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildFeaturedBanner() {
-    return Container(
-      margin: const EdgeInsets.all(12),
-      height: 180,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        image: const DecorationImage(
-          image: NetworkImage('https://images.unsplash.com/photo-1578632767115-351597cf2477?w=600&auto=format&fit=crop&q=60'),
-          fit: BoxFit.cover,
-        ),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            bottom: 10,
-            left: 10,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Moana [Hindi]',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-                ),
-                Row(
-                  children: const [
-                    Icon(Icons.play_circle, color: Colors.greenAccent, size: 16),
-                    SizedBox(width: 4),
-                    Text('2026 • Action / Animation', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                  ],
-                ),
-              ],
-            ),
+  Widget _buildFeaturedBanner(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const DetailsScreen()),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.all(12),
+        height: 180,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          image: const DecorationImage(
+            image: NetworkImage('https://images.unsplash.com/photo-1578632767115-351597cf2477?w=600&auto=format&fit=crop&q=60'),
+            fit: BoxFit.cover,
           ),
-        ],
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              bottom: 10,
+              left: 10,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Moana [Hindi]',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                  Row(
+                    children: const [
+                      Icon(Icons.play_circle, color: Colors.greenAccent, size: 16),
+                      SizedBox(width: 4),
+                      Text('2026 • Action', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildSubCategoryPills() {
+  Widget _buildSubCategoryPills(BuildContext context) {
     final pills = ['All', 'Action', 'Romance', 'Comedy', 'South Indian'];
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 12.0),
       child: Row(
         children: pills.map((pill) {
-          final isSelected = pill == 'All';
           return Container(
             margin: const EdgeInsets.only(right: 8),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
-              color: isSelected ? Colors.green[800] : const Color(0xFF2A2A2A),
+              color: pill == 'All' ? Colors.green[800] : const Color(0xFF2A2A2A),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
@@ -256,115 +256,121 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildSectionHeader(String title) {
+  Widget _buildSectionHeader(String title, BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            title,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-          ),
-          const Text(
-            'All >',
-            style: TextStyle(fontSize: 13, color: Colors.grey),
+          Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => CategoryScreen(categoryName: title)),
+              );
+            },
+            child: const Text('All >', style: TextStyle(fontSize: 13, color: Colors.grey)),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildHorizontalCardList(List<_ContentItem> items) {
+  Widget _buildHorizontalCardList(BuildContext context) {
     return SizedBox(
       height: 200,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 8),
-        itemCount: items.length,
+        itemCount: 4,
         itemBuilder: (context, index) {
-          final item = items[index];
-          return Container(
-            width: 120,
-            margin: const EdgeInsets.symmetric(horizontal: 4),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Stack(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        item.imageUrl,
-                        height: 150,
-                        width: 120,
-                        fit: BoxFit.cover,
-                      ),
+          return GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const DetailsScreen()),
+              );
+            },
+            child: Container(
+              width: 120,
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=300&auto=format&fit=crop&q=60',
+                      height: 150,
+                      width: 120,
+                      fit: BoxFit.cover,
                     ),
-                    Positioned(
-                      top: 6,
-                      right: 6,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.black54,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          item.badge,
-                          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  item.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white, fontSize: 12),
-                ),
-              ],
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Irumudi [Hindi]',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: Colors.white, fontSize: 12),
+                  ),
+                ],
+              ),
             ),
           );
         },
       ),
     );
   }
+}
 
-  Widget _buildActorList() {
-    final actors = [
-      {'name': 'Allu Arjun', 'img': 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=60'},
-      {'name': 'Kareena Kapoor', 'img': 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=200&auto=format&fit=crop&q=60'},
-      {'name': 'Shah Rukh Khan', 'img': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=60'},
-      {'name': 'Kriti Sanon', 'img': 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&auto=format&fit=crop&q=60'},
-    ];
+// 2. CATEGORY SCREEN (category.html equivalent)
+class CategoryScreen extends StatelessWidget {
+  final String categoryName;
+  const CategoryScreen({super.key, required this.categoryName});
 
-    return SizedBox(
-      height: 90,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        itemCount: actors.length,
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(categoryName),
+        backgroundColor: const Color(0xFF1E1E1E),
+      ),
+      body: GridView.builder(
+        padding: const EdgeInsets.all(12),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          childAspectRatio: 0.65,
+          crossAxisSpacing: 8,
+          mainAxisSpacing: 8,
+        ),
+        itemCount: 10,
         itemBuilder: (context, index) {
-          final actor = actors[index];
-          return Container(
-            width: 75,
-            margin: const EdgeInsets.symmetric(horizontal: 4),
+          return GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const DetailsScreen()),
+              );
+            },
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CircleAvatar(
-                  radius: 30,
-                  backgroundImage: NetworkImage(actor['img']!),
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      'https://images.unsplash.com/photo-1563089145-599997674d42?w=300&auto=format&fit=crop&q=60',
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  actor['name']!,
+                const Text(
+                  'Movie Title',
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white70, fontSize: 11),
-                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white, fontSize: 12),
                 ),
               ],
             ),
@@ -375,10 +381,111 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _ContentItem {
-  final String title;
-  final String badge;
-  final String imageUrl;
+// 3. DETAILS SCREEN (details.html equivalent)
+class DetailsScreen extends StatelessWidget {
+  const DetailsScreen({super.key});
 
-  _ContentItem(this.title, this.badge, this.imageUrl);
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Stack(
+              children: [
+                Image.network(
+                  'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=600&auto=format&fit=crop&q=60',
+                  height: 250,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
+                Positioned(
+                  top: 40,
+                  left: 10,
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ),
+                Positioned(
+                  bottom: 50,
+                  left: MediaQuery.of(context).size.width / 2 - 30,
+                  child: FloatingActionButton(
+                    backgroundColor: Colors.greenAccent,
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const PlayerScreen()),
+                      );
+                    },
+                    child: const Icon(Icons.play_arrow, color: Colors.black, size: 35),
+                  ),
+                ),
+              ],
+            ),
+            Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text(
+                    'Movie Details / Title',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    '2026 • Action • Hindi • 2h 15m',
+                    style: TextStyle(color: Colors.grey, fontSize: 13),
+                  ),
+                  SizedBox(height: 12),
+                  Text(
+                    'Description of the movie or show goes here. Complete details fetched from TMDB integration logic.',
+                    style: TextStyle(color: Colors.white70, fontSize: 14),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// 4. PLAYER SCREEN (player.html equivalent)
+class PlayerScreen extends StatelessWidget {
+  const PlayerScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Icon(Icons.play_circle_fill, size: 80, color: Colors.greenAccent),
+                SizedBox(height: 10),
+                Text(
+                  'Streaming Video Player...',
+                  style: TextStyle(color: Colors.white70, fontSize: 16),
+                ),
+              ],
+            ),
+          ),
+          Positioned(
+            top: 40,
+            left: 10,
+            child: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white, size: 28),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
