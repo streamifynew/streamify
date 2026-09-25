@@ -92,7 +92,7 @@ class ContentItem {
 // Do NOT commit your real key if this repo is public — load it
 // from --dart-define or a local untracked config file instead.
 // ============================================================
-const String tmdbApiKey = "6648327a11d56b365137fcb154100589";
+const String tmdbApiKey = "368c97ebade673670d0a9c28b6facb17";
 const String tmdbBase = "https://api.themoviedb.org/3";
 const String imgBase = "https://image.tmdb.org/t/p";
 
