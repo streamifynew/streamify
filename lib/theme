@@ -1,1 +1,24 @@
+import 'package:flutter/material.dart';
+
+class AppColors {
+  static const bg = Color(0xFF060A14);
+  static const heroBgStart = Color(0xFF0D1C3A);
+  static const accent = Color(0xFF378ADD);
+  static const accentDark = Color(0xFF042C53);
+  static const textDim = Color(0x8CFFFFFF); // 55% white
+  static const cardBorder = Color(0x14FFFFFF); // 8% white
+  static const pillBg = Color(0x14FFFFFF);
+  static const pillText = Color(0xBFFFFFFF); // 75% white
+}
+
+final ThemeData appTheme = ThemeData(
+  scaffoldBackgroundColor: AppColors.bg,
+  fontFamily: 'Roboto',
+  brightness: Brightness.dark,
+  colorScheme: const ColorScheme.dark(
+    primary: AppColors.accent,
+    surface: AppColors.bg,
+  ),
+  useMaterial3: true,
+);
 
