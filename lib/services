@@ -1,1 +1,192 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import '../models/content_item.dart';
+
+// ============================================================
+// TMDB CONFIG
+// Get a free key at https://www.themoviedb.org/settings/api
+// Do NOT commit your real key if this repo is public — load it
+// from --dart-define or a local untracked config file instead.
+// ============================================================
+const String tmdbApiKey = "YOUR_TMDB_V3_API_KEY";
+const String tmdbBase = "https://api.themoviedb.org/3";
+const String imgBase = "https://image.tmdb.org/t/p";
+
+String posterUrl(String? path, {String size = "w342"}) {
+  if (path == null || path.isEmpty) return "";
+  return "$imgBase/$size$path";
+}
+
+// ------------------------------------------------------------
+// CATEGORY -> SUBCATEGORY MAP (matches the app's category rows)
+// ------------------------------------------------------------
+const Map<String, List<List<String>>> subcats = {
+  "movies": [
+    ["hollywood", "Hollywood multi-audio"],
+    ["bollywood", "Bollywood Hindi"],
+    ["south", "South cinema multi-audio"],
+  ],
+  "tvshows": [
+    ["webseries", "Webseries multi-audio"],
+    ["tvshows", "TV shows multi-audio"],
+    ["kdrama", "K-drama multi-audio"],
+  ],
+  "anime": [
+    ["animated", "Animated movies/shows"],
+    ["anime", "Anime"],
+    ["cartoon", "Cartoon shows/series"],
+  ],
+};
+
+class TmdbService {
+  Uri _discoverUrl(String type, Map<String, String> params) {
+    return Uri.parse("$tmdbBase/discover/$type").replace(queryParameters: {
+      "api_key": tmdbApiKey,
+      "sort_by": "popularity.desc",
+      ...params,
+    });
+  }
+
+  Future<List<ContentItem>> fetchTrending() async {
+    final res = await http.get(Uri.parse("$tmdbBase/trending/all/week?api_key=$tmdbApiKey"));
+    final data = jsonDecode(res.body);
+    return (data['results'] as List)
+        .map((r) => ContentItem.fromJson(r))
+        .toList();
+  }
+
+  Future<List<ContentItem>> fetchMovies(String? sub) async {
+    if (sub == "south") {
+      // Telugu/Tamil/Malayalam/Kannada, merged, kept only if a Hindi dub exists.
+      final langs = ["te", "ta", "ml", "kn"];
+      final Map<int, ContentItem> merged = {};
+      for (final lang in langs) {
+        final res = await http.get(_discoverUrl("movie", {"with_original_language": lang}));
+        final data = jsonDecode(res.body);
+        for (final r in data['results']) {
+          final item = ContentItem.fromJson(r, forcedType: "movie");
+          merged[item.id] = item;
+        }
+      }
+      final list = merged.values.toList();
+      for (final item in list) {
+        item.hindiDubbed = await hasHindiDub(item.id, "movie");
+      }
+      return list.where((i) => i.hindiDubbed).toList();
+    }
+
+    final lang = sub == "bollywood" ? "hi" : "en"; // hollywood default
+    final res = await http.get(_discoverUrl("movie", {"with_original_language": lang}));
+    final data = jsonDecode(res.body);
+    return (data['results'] as List)
+        .map((r) => ContentItem.fromJson(r, forcedType: "movie"))
+        .toList();
+  }
+
+  Future<List<ContentItem>> fetchTV(String? sub) async {
+    Uri url;
+    if (sub == "kdrama") {
+      url = _discoverUrl("tv", {"with_origin_country": "KR"});
+    } else if (sub == "webseries") {
+      url = _discoverUrl("tv", {"with_original_language": "en"});
+    } else {
+      url = _discoverUrl("tv", {});
+    }
+    final res = await http.get(url);
+    final data = jsonDecode(res.body);
+    return (data['results'] as List)
+        .map((r) => ContentItem.fromJson(r, forcedType: "tv"))
+        .toList();
+  }
+
+  Future<List<ContentItem>> fetchAnime(String? sub) async {
+    Uri url;
+    String type;
+    if (sub == "anime") {
+      url = _discoverUrl("tv", {"with_genres": "16", "with_original_language": "ja"});
+      type = "tv";
+    } else if (sub == "cartoon") {
+      url = _discoverUrl("tv", {"with_genres": "16", "with_original_language": "en"});
+      type = "tv";
+    } else {
+      url = _discoverUrl("movie", {"with_genres": "16"}); // animated movies/shows
+      type = "movie";
+    }
+    final res = await http.get(url);
+    final data = jsonDecode(res.body);
+    return (data['results'] as List)
+        .map((r) => ContentItem.fromJson(r, forcedType: type))
+        .toList();
+  }
+
+  Future<List<ContentItem>> fetchByCategory(String cat, [String? sub]) async {
+    switch (cat) {
+      case "trending":
+        return fetchTrending();
+      case "movies":
+        return fetchMovies(sub);
+      case "tvshows":
+        return fetchTV(sub);
+      case "anime":
+        return fetchAnime(sub);
+      default:
+        return [];
+    }
+  }
+
+  // ------------------------------------------------------------
+  // HINDI-DUB HEURISTIC
+  // TMDB doesn't expose dubbed-audio info directly. This checks
+  // whether a Hindi (hi) translation exists for the title as a
+  // rough proxy. For accurate badges, prefer a flag from your own
+  // content DB once you're bulk-uploading (hindiDubbed: true/false).
+  // ------------------------------------------------------------
+  Future<bool> hasHindiDub(int id, String type) async {
+    try {
+      final res = await http.get(
+        Uri.parse("$tmdbBase/$type/$id/translations?api_key=$tmdbApiKey"),
+      );
+      final data = jsonDecode(res.body);
+      final translations = data['translations'] as List? ?? [];
+      return translations.any((t) => t['iso_639_1'] == "hi");
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<void> tagHindi(List<ContentItem> items, {int limit = 10}) async {
+    final slice = items.take(limit).toList();
+    await Future.wait(slice.map((item) async {
+      item.hindiDubbed = await hasHindiDub(item.id, item.type);
+    }));
+  }
+
+  Future<Map<String, dynamic>> fetchDetails(int id, String type) async {
+    final res = await http.get(Uri.parse(
+        "$tmdbBase/$type/$id?api_key=$tmdbApiKey&append_to_response=credits"));
+    return jsonDecode(res.body);
+  }
+
+  Future<List<dynamic>> fetchSeasonEpisodes(int id, int seasonNumber) async {
+    final res = await http.get(Uri.parse(
+        "$tmdbBase/tv/$id/season/$seasonNumber?api_key=$tmdbApiKey"));
+    final data = jsonDecode(res.body);
+    return data['episodes'] ?? [];
+  }
+
+  // ------------------------------------------------------------
+  // VIDEO SOURCE HOOK
+  // TMDB has no playable video files — it's metadata only.
+  // When you bulk-upload your own hosted content, store each
+  // video keyed by its TMDB id (and type) in Firestore/your DB.
+  // Wire that lookup here so Play knows what to stream.
+  // ------------------------------------------------------------
+  Future<String?> getVideoUrl(int tmdbId, String type) async {
+    // TODO: replace with your real Firestore lookup, e.g.
+    // final doc = await FirebaseFirestore.instance
+    //     .collection('videos').doc('${type}_$tmdbId').get();
+    // return doc.exists ? doc['videoUrl'] as String : null;
+    return null;
+  }
+}
 
