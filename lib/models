@@ -1,1 +1,31 @@
+class ContentItem {
+  final int id;
+  final String title;
+  final String? posterPath;
+  final String? backdropPath;
+  final double voteAverage;
+  final String type; // "movie" or "tv"
+  bool hindiDubbed;
 
+  ContentItem({
+    required this.id,
+    required this.title,
+    this.posterPath,
+    this.backdropPath,
+    this.voteAverage = 0,
+    required this.type,
+    this.hindiDubbed = false,
+  });
+
+  factory ContentItem.fromJson(Map<String, dynamic> json, {String? forcedType}) {
+    final type = forcedType ?? json['media_type'] ?? (json['title'] != null ? 'movie' : 'tv');
+    return ContentItem(
+      id: json['id'],
+      title: json['title'] ?? json['name'] ?? 'Untitled',
+      posterPath: json['poster_path'],
+      backdropPath: json['backdrop_path'],
+      voteAverage: (json['vote_average'] ?? 0).toDouble(),
+      type: type,
+    );
+  }
+}
