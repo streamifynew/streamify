@@ -13,6 +13,7 @@ dependencies:
   http: ^1.2.0             # APIs se movie data fetch karne ke liye
   video_player: ^2.8.2      # Videos play karne ke liye
   cached_network_image: ^3.3.1 # Movie posters smoothly load aur cache karne ke liye
+  google_fonts: ^6.2.1
 
 dev_dependencies:
   flutter_test:
