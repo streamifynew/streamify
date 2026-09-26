@@ -1,5 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:video_player/video_player.dart';
 
@@ -29,23 +32,61 @@ class AppColors {
   static const bg = Color(0xFF060A14);
   static const heroBgStart = Color(0xFF0D1C3A);
   static const accent = Color(0xFF378ADD);
+  static const accentGlow = Color(0x66378ADD); // accent at 40% for shadows/glow
   static const accentDark = Color(0xFF042C53);
   static const textDim = Color(0x8CFFFFFF); // 55% white
   static const cardBorder = Color(0x14FFFFFF); // 8% white
   static const pillBg = Color(0x14FFFFFF);
   static const pillText = Color(0xBFFFFFFF); // 75% white
+  static const cardShadow = Color(0x99000000); // 60% black
 }
 
 final ThemeData appTheme = ThemeData(
   scaffoldBackgroundColor: AppColors.bg,
-  fontFamily: 'Roboto',
   brightness: Brightness.dark,
   colorScheme: const ColorScheme.dark(
     primary: AppColors.accent,
     surface: AppColors.bg,
   ),
+  textTheme: GoogleFonts.poppinsTextTheme(ThemeData.dark().textTheme),
   useMaterial3: true,
 );
+
+/// A small frosted-glass chip (blurred, translucent) used for the
+/// "Hindi" badge and similar overlays — gives the poster cards the
+/// premium glass look instead of a flat rectangle.
+class GlassBadge extends StatelessWidget {
+  final String text;
+  final Color? tint;
+  const GlassBadge(this.text, {super.key, this.tint});
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(6),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+          decoration: BoxDecoration(
+            color: (tint ?? Colors.white).withOpacity(0.22),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: Colors.white.withOpacity(0.25), width: 0.6),
+          ),
+          child: Text(
+            text,
+            style: GoogleFonts.poppins(
+              color: Colors.white,
+              fontSize: 9.5,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.2,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 // ============================================================
 // MODEL
@@ -92,7 +133,7 @@ class ContentItem {
 // Do NOT commit your real key if this repo is public — load it
 // from --dart-define or a local untracked config file instead.
 // ============================================================
-const String tmdbApiKey = "368c97ebade673670d0a9c28b6facb17";
+const String tmdbApiKey = "YOUR_TMDB_V3_API_KEY";
 const String tmdbBase = "https://api.themoviedb.org/3";
 const String imgBase = "https://image.tmdb.org/t/p";
 
@@ -286,13 +327,14 @@ class PosterCard extends StatelessWidget {
   const PosterCard({
     super.key,
     required this.item,
-    this.width = 110,
-    this.height = 155,
+    this.width = 118,
+    this.height = 172,
   });
 
   @override
   Widget build(BuildContext context) {
     final poster = posterUrl(item.posterPath);
+    final radius = BorderRadius.circular(14);
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -305,69 +347,89 @@ class PosterCard extends StatelessWidget {
       child: Container(
         width: width,
         height: height,
-        margin: const EdgeInsets.only(right: 10),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          color: const Color(0xFF12203F),
-          image: poster.isNotEmpty
-              ? DecorationImage(image: NetworkImage(poster), fit: BoxFit.cover)
-              : null,
-        ),
-        child: Stack(
-          children: [
-            // bottom gradient for legible title
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
-                  gradient: const LinearGradient(
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
-                    colors: [Colors.black87, Colors.transparent],
-                    stops: [0.15, 0.55],
-                  ),
-                ),
-              ),
-            ),
-            if (item.hindiDubbed)
-              Positioned(
-                top: 6,
-                left: 6,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.22),
-                    borderRadius: BorderRadius.circular(5),
-                  ),
-                  child: const Text(
-                    "Hindi",
-                    style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ),
-            Positioned(
-              bottom: 6,
-              left: 8,
-              right: 8,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (item.voteAverage > 0)
-                    Text(
-                      item.voteAverage.toStringAsFixed(1),
-                      style: const TextStyle(color: Color(0xFF85B7EB), fontSize: 10),
-                    ),
-                  Text(
-                    item.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600, height: 1.2),
-                  ),
-                ],
-              ),
+          borderRadius: radius,
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.cardShadow,
+              blurRadius: 10,
+              offset: const Offset(0, 6),
             ),
           ],
+        ),
+        child: ClipRRect(
+          borderRadius: radius,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Container(
+                color: const Color(0xFF12203F),
+                child: poster.isNotEmpty
+                    ? Image.network(poster, fit: BoxFit.cover)
+                    : const Icon(Icons.movie_outlined, color: Colors.white24, size: 30),
+              ),
+              // stronger bottom scrim so title/rating stay legible on any poster
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [Colors.black, Colors.transparent],
+                    stops: [0.05, 0.75],
+                  ),
+                ),
+              ),
+              // thin border for definition against dark backgrounds
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: radius,
+                  border: Border.all(color: Colors.white.withOpacity(0.06), width: 1),
+                ),
+              ),
+              if (item.hindiDubbed)
+                const Positioned(top: 7, left: 7, child: GlassBadge("Hindi")),
+              if (item.voteAverage > 0)
+                Positioned(
+                  top: 7,
+                  right: 7,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.55),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.star_rounded, color: Color(0xFFFFC94D), size: 11),
+                        const SizedBox(width: 2),
+                        Text(
+                          item.voteAverage.toStringAsFixed(1),
+                          style: GoogleFonts.poppins(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              Positioned(
+                bottom: 8,
+                left: 9,
+                right: 9,
+                child: Text(
+                  item.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    height: 1.25,
+                    shadows: const [Shadow(color: Colors.black87, blurRadius: 4, offset: Offset(0, 1))],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -389,7 +451,11 @@ class _HomeScreenState extends State<HomeScreen> {
   final tmdb = TmdbService();
   String activeTab = "trending";
   bool loading = true;
-  ContentItem? heroItem;
+  String? error;
+  List<ContentItem> heroItems = [];
+  int heroIndex = 0;
+  Timer? heroTimer;
+  ContentItem? get heroItem => heroItems.isNotEmpty ? heroItems[heroIndex] : null;
 
   // cat "trending" -> single list; others -> map of sub key -> list
   List<ContentItem> trendingItems = [];
@@ -411,31 +477,63 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _load(String cat) async {
     setState(() {
       loading = true;
+      error = null;
       activeTab = cat;
     });
 
-    if (cat == "trending") {
-      final items = await tmdb.fetchTrending();
-      await tmdb.tagHindi(items);
+    try {
+      if (cat == "trending") {
+        final items = await tmdb.fetchTrending();
+        await tmdb.tagHindi(items);
+        setState(() {
+          trendingItems = items;
+          loading = false;
+        });
+        _startHeroRotation(items.take(6).toList());
+        return;
+      }
+
+      final subs = subcats[cat] ?? [];
+      final Map<String, List<ContentItem>> result = {};
+      for (final s in subs) {
+        final items = await tmdb.fetchByCategory(cat, s[0]);
+        await tmdb.tagHindi(items);
+        result[s[0]] = items;
+      }
       setState(() {
-        trendingItems = items;
-        heroItem = items.isNotEmpty ? items.first : null;
+        subLists = result;
         loading = false;
       });
-      return;
+      // pull a couple of picks from each subcategory so the banner
+      // actually reflects *this* tab (Movies/TV shows/Anime), not
+      // whatever was showing before.
+      final picks = result.values.expand((l) => l.take(2)).toList();
+      _startHeroRotation(picks.take(6).toList());
+    } catch (e) {
+      setState(() {
+        error = e.toString();
+        loading = false;
+      });
     }
+  }
 
-    final subs = subcats[cat] ?? [];
-    final Map<String, List<ContentItem>> result = {};
-    for (final s in subs) {
-      final items = await tmdb.fetchByCategory(cat, s[0]);
-      await tmdb.tagHindi(items);
-      result[s[0]] = items;
-    }
+  void _startHeroRotation(List<ContentItem> items) {
+    heroTimer?.cancel();
     setState(() {
-      subLists = result;
-      loading = false;
+      heroItems = items;
+      heroIndex = 0;
     });
+    if (items.length <= 1) return;
+    heroTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (!mounted) return;
+      setState(() => heroIndex = (heroIndex + 1) % heroItems.length);
+    });
+  }
+
+  @override
+  void dispose() {
+    heroTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -455,6 +553,23 @@ class _HomeScreenState extends State<HomeScreen> {
                   padding: EdgeInsets.all(40),
                   child: Center(child: CircularProgressIndicator(color: AppColors.accent)),
                 )
+              else if (error != null)
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      const Text("Something went wrong loading content:",
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      Text(error!, style: const TextStyle(color: Colors.redAccent, fontSize: 12)),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () => _load(activeTab),
+                        child: const Text("Retry"),
+                      ),
+                    ],
+                  ),
+                )
               else
                 _buildRows(),
               const SizedBox(height: 80),
@@ -470,26 +585,41 @@ class _HomeScreenState extends State<HomeScreen> {
     final backdrop = heroItem != null ? posterUrl(heroItem!.backdropPath, size: "w780") : "";
     return Container(
       height: MediaQuery.of(context).size.height * 0.42,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [AppColors.heroBgStart, AppColors.bg],
         ),
-        image: backdrop.isNotEmpty
-            ? DecorationImage(image: NetworkImage(backdrop), fit: BoxFit.cover)
-            : null,
       ),
       child: Stack(
         children: [
+          // Crossfade the backdrop art itself as the banner rotates
+          // between trending/category picks — this is what makes it
+          // feel alive instead of one static poster forever.
+          Positioned.fill(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 700),
+              child: backdrop.isNotEmpty
+                  ? Image.network(
+                      backdrop,
+                      key: ValueKey(heroItem?.id),
+                      fit: BoxFit.cover,
+                    )
+                  : const SizedBox(key: ValueKey("empty")),
+            ),
+          ),
+          // Layered scrim: dark at the very top (for the status bar/logo)
+          // AND a deep fade at the bottom into the page background, so the
+          // poster art reads as a cinematic backdrop rather than a flat photo.
           Positioned.fill(
             child: DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Colors.black.withOpacity(0.1), AppColors.bg],
-                  stops: const [0.4, 1.0],
+                  colors: [Colors.black.withOpacity(0.55), Colors.transparent, AppColors.bg],
+                  stops: const [0.0, 0.35, 1.0],
                 ),
               ),
             ),
@@ -499,10 +629,15 @@ class _HomeScreenState extends State<HomeScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
+                children: [
                   Text("Streamify",
-                      style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.w700, fontSize: 19)),
-                  Icon(Icons.search, color: Colors.white),
+                      style: GoogleFonts.poppins(
+                        color: AppColors.accent,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 20,
+                        letterSpacing: 0.3,
+                      )),
+                  const Icon(Icons.search, color: Colors.white),
                 ],
               ),
             ),
@@ -512,23 +647,44 @@ class _HomeScreenState extends State<HomeScreen> {
               left: 16,
               right: 16,
               bottom: 20,
-              child: Column(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 400),
+                child: Column(
+                key: ValueKey(heroItem!.id),
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(heroItem!.title,
-                      style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 4),
-                  Text(
-                    heroItem!.voteAverage > 0 ? "${heroItem!.voteAverage.toStringAsFixed(1)} rating" : "",
-                    style: const TextStyle(color: AppColors.textDim, fontSize: 12),
-                  ),
-                  const SizedBox(height: 12),
+                      style: GoogleFonts.poppins(
+                        color: Colors.white,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.2,
+                        shadows: const [Shadow(color: Colors.black87, blurRadius: 10, offset: Offset(0, 2))],
+                      )),
+                  const SizedBox(height: 6),
+                  if (heroItem!.voteAverage > 0)
+                    Row(
+                      children: [
+                        const Icon(Icons.star_rounded, color: Color(0xFFFFC94D), size: 15),
+                        const SizedBox(width: 4),
+                        Text(
+                          "${heroItem!.voteAverage.toStringAsFixed(1)} rating",
+                          style: GoogleFonts.poppins(color: AppColors.textDim, fontSize: 12.5),
+                        ),
+                      ],
+                    ),
+                  const SizedBox(height: 16),
                   Row(
                     children: [
                       ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.accent,
                           foregroundColor: AppColors.accentDark,
+                          elevation: 6,
+                          shadowColor: AppColors.accentGlow,
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          textStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14.5),
                         ),
                         onPressed: () => Navigator.push(
                           context,
@@ -536,14 +692,18 @@ class _HomeScreenState extends State<HomeScreen> {
                             builder: (_) => DetailsScreen(id: heroItem!.id, type: heroItem!.type, autoplay: true),
                           ),
                         ),
-                        icon: const Icon(Icons.play_arrow, size: 18),
+                        icon: const Icon(Icons.play_arrow, size: 20),
                         label: const Text("Play"),
                       ),
                       const SizedBox(width: 10),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white.withOpacity(0.12),
+                      OutlinedButton(
+                        style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.white,
+                          backgroundColor: Colors.white.withOpacity(0.08),
+                          side: BorderSide(color: Colors.white.withOpacity(0.18)),
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          textStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14.5),
                         ),
                         onPressed: () => Navigator.push(
                           context,
@@ -556,6 +716,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                 ],
+                ),
               ),
             ),
         ],
@@ -565,28 +726,33 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildTabs() {
     return SizedBox(
-      height: 44,
+      height: 48,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.only(left: 16, right: 28, top: 8, bottom: 8),
         children: tabs.map((t) {
           final isActive = activeTab == t[0];
           return GestureDetector(
             onTap: () => _load(t[0]),
-            child: Container(
-              margin: const EdgeInsets.only(right: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              margin: const EdgeInsets.only(right: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
               decoration: BoxDecoration(
                 color: isActive ? AppColors.accent : AppColors.pillBg,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: isActive
+                    ? [BoxShadow(color: AppColors.accentGlow, blurRadius: 12, offset: const Offset(0, 3))]
+                    : null,
               ),
               alignment: Alignment.center,
               child: Text(
                 t[1],
-                style: TextStyle(
+                style: GoogleFonts.poppins(
                   color: isActive ? AppColors.accentDark : AppColors.pillText,
-                  fontSize: 13,
-                  fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                  fontSize: 13.5,
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                  letterSpacing: 0.2,
                 ),
               ),
             ),
@@ -610,7 +776,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _sectionRow(String title, List<ContentItem> items, String cat, String? sub) {
     return Padding(
-      padding: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.only(top: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -619,24 +785,47 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(title, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600)),
+                Row(
+                  children: [
+                    Container(
+                      width: 4,
+                      height: 16,
+                      decoration: BoxDecoration(
+                        color: AppColors.accent,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(title,
+                        style: GoogleFonts.poppins(
+                            color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600, letterSpacing: 0.2)),
+                  ],
+                ),
                 GestureDetector(
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => CategoryScreen(category: cat, subcategory: sub)),
                   ),
-                  child: const Text("See all", style: TextStyle(color: AppColors.accent, fontSize: 12)),
+                  child: Row(
+                    children: [
+                      Text("See all",
+                          style: GoogleFonts.poppins(color: AppColors.accent, fontSize: 12.5, fontWeight: FontWeight.w500)),
+                      const Icon(Icons.chevron_right, color: AppColors.accent, size: 16),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           SizedBox(
-            height: 155,
-            child: ListView(
+            height: 172,
+            child: ListView.separated(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              children: items.map((i) => PosterCard(item: i)).toList(),
+              itemCount: items.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              itemBuilder: (_, i) => PosterCard(item: items[i]),
             ),
           ),
         ],
