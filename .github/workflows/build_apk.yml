@@ -28,17 +28,20 @@ jobs:
           if [ -d "root" ]; then
             cp -r root/* .
           fi
-          
+
           # Remove old android folder to prevent version mismatch
           rm -rf android
-          
+
           # Recreate native android wrapper files cleanly
           flutter create . --platforms=android --org com.streamworld.app
-          
+
+          # Add internet permission (needed for TMDB API calls)
+          sed -i '/<manifest /a\    <uses-permission android:name="android.permission.INTERNET" />' android/app/src/main/AndroidManifest.xml
+
           flutter pub add http
           flutter pub add video_player
           flutter pub get
-          
+
           flutter build apk --release
 
       - name: Upload APK
